@@ -54,7 +54,7 @@ def main():
     playerStats = stats(HP=40,DEF=2,STR=5)
     invStorage  = Inventory(28)
     player      = Entity(0, 0, '@', libtcod.red, 'Player', blocks=True,
-        render_order = renderOrder.ACTOR, stats=playerStats)
+        render_order = renderOrder.ACTOR, stats=playerStats, inventory=invStorage)
     
     # npc list; location, symbol, color
 
@@ -157,8 +157,8 @@ def main():
         elif grab and gameState == gameStates.PLAYER_TURN:
             for entity in entities:
                 if entity.item and entity.x == player.x and entity.y == player.y:
-                    grab = player.inventory.addItem(entity)
-                    playerTurnResults.extend(grab)
+                    pickupResults = player.inventory.addItem(entity)
+                    playerTurnResults.extend(pickupResults)
 
                     break
 
@@ -178,7 +178,6 @@ def main():
         # inventory screen check
         if invIndex is not None and previousState != gameStates.PLAYER_DEAD and invIndex < len(player.inventory.items):
             item = player.inventory.items[invIndex]
-            playerTurnResults.extend(player.inventory.use(item))
 
             if gameState == gameStates.SHOW_INVENTORY:
                 playerTurnResults.extend(player.inventory.use(item))
@@ -229,6 +228,8 @@ def main():
             # If you drop an item...
             if itemDropped:
                 entities.append(itemDropped)
+
+                gameState = gameStates.ENEMY_TURN
 
         if gameState == gameStates.ENEMY_TURN:
             for entity in entities:

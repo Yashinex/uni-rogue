@@ -1,4 +1,4 @@
-import libtcodpy as libtcodpy
+import libtcodpy as libtcod
 
 from gameMessages import Message
 
@@ -11,17 +11,18 @@ def heal(*args, **kwargs):
     if entity.stats.HP == entity.stats.maxHP:
         results.append({
             'consumed' : False,
-            'message'  : Message('You are already at full health.', 
-                libtcod.yellow)
+            'message'  : Message('You are already at full health.', libtcod.yellow)
         })
 
     else:
         entity.stats.heal(amount)
 
+        if entity.stats.HP >= entity.stats.maxHP:
+            entity.stats.HP = entity.stats.maxHP
+
         results.append({
             'consumed' : True,
-            'message'  : Message('Your wounds start to feel better.',
-                libtcod.yellow)
+            'message'  : Message('Your wounds start to feel better.', libtcod.yellow)
         })
 
     return results
