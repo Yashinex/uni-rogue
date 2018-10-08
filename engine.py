@@ -11,28 +11,33 @@ from deathFunctions     import killPlayer, killMonster
 
 def main():
     # screen size
-    screenWidth = 80
+    screenWidth  = 80
     screenHeight = 80
 
+    # ui elements
+    healthbarWidth = 20
+    panelHeight    = 7
+    panelDiff      = screenHeight - panelHeight
+
     # map size
-    mapWidth = 80
-    mapHeight = 60
+    mapWidth  = 80
+    mapHeight = 58
 
     # room parameters
     roomMaxSize = 10
     roomMinSize = 6
-    maxRooms = 30
+    maxRooms    = 30
 
     # monsters
     maxMonstersRoom = 3
 
     # object colors dictionary
     colors = {
-        'darkWall'   : libtcod.Color(0, 0, 100),
-        'darkGround' : libtcod.Color(50, 50, 150),
-        'lightWall' : libtcod.Color(130, 110, 50),
-        'lightGround' : libtcod.Color(200, 180, 50),
-        'whiteWall' : libtcod.Color(255, 255, 255)
+        'darkWall'      : libtcod.Color(50, 50, 50),
+        'darkGround'    : libtcod.Color(50, 50, 150),
+        'lightWall'     : libtcod.Color(100, 100, 100),
+        'lightGround'   : libtcod.Color(100, 50, 20),
+        'whiteWall'     : libtcod.Color(255, 255, 255)
     }
 
     # player stats, location, symbol, and color
@@ -51,8 +56,11 @@ def main():
     libtcod.console_init_root(screenWidth, screenHeight,
         'libtcod tutorial revised', False)
 
-    # creates window [DO NOT DELETE]
-    con = libtcod.console_new(screenWidth,screenHeight)
+    # creates windows [DO NOT DELETE]
+    # console window
+    con     = libtcod.console_new(screenWidth,screenHeight)
+    # panel window, holds HP and message log
+    panel   = libtcod.console_new(screenWidth, panelHeight)
 
     game_map = gameMap(mapWidth, mapHeight)
     game_map.makeMap(maxRooms, roomMinSize, roomMaxSize, mapWidth, mapHeight,
