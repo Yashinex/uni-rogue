@@ -102,4 +102,3 @@ def getBlockingEntitiesAtLocation(entities, destX, destY):
             return entity
 
     return None
-

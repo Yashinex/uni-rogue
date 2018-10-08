@@ -8,6 +8,7 @@ from fovFunctions       import initializeFOV, recomputeFOV
 from gameStates         import gameStates
 from components.stats   import stats
 from deathFunctions     import killPlayer, killMonster
+from gameMessages       import messageLog
 
 def main():
     # screen size
@@ -15,9 +16,14 @@ def main():
     screenHeight = 80
 
     # ui elements
-    healthbarWidth = 20
+    barWidth       = 20
     panelHeight    = 7
     panelDiff      = screenHeight - panelHeight
+
+    # message log
+    messageX       = barWidth + 2
+    messageWidth   = screenWidth - barWidth - 2
+    messageHeight  = panelHeight - 1
 
     # map size
     mapWidth  = 80
@@ -34,9 +40,9 @@ def main():
     # object colors dictionary
     colors = {
         'darkWall'      : libtcod.Color(50, 50, 50),
-        'darkGround'    : libtcod.Color(50, 50, 150),
+        'darkGround'    : libtcod.Color(25, 25, 25),
         'lightWall'     : libtcod.Color(100, 100, 100),
-        'lightGround'   : libtcod.Color(100, 50, 20),
+        'lightGround'   : libtcod.Color(200, 200, 200),
         'whiteWall'     : libtcod.Color(255, 255, 255)
     }
 
@@ -62,6 +68,7 @@ def main():
     # panel window, holds HP and message log
     panel   = libtcod.console_new(screenWidth, panelHeight)
 
+    # creates the game map and initializes its attributes
     game_map = gameMap(mapWidth, mapHeight)
     game_map.makeMap(maxRooms, roomMinSize, roomMaxSize, mapWidth, mapHeight,
         player, entities, maxMonstersRoom)
@@ -72,6 +79,9 @@ def main():
     fov_radius      = 10
     fov_recompute   = True
     fov_map         = initializeFOV(game_map)
+
+    # message log
+    msg_log = messageLog(messageX, messageWidth, messageHeight)
 
     # mouse, keyboard init
     key   = libtcod.Key()
@@ -89,8 +99,9 @@ def main():
             fov_algorithm)
 
         # [DO NOT DELETE] renders entities each frame
-        renderAll(con, entities, player, game_map, fov_map, fov_recompute,
-        screenWidth, screenHeight, colors)
+        renderAll(con, panel, entities, player, game_map, fov_map, 
+            fov_recompute, msg_log, screenWidth, screenHeight, barWidth,
+            panelHeight, panelDiff, colors)
 
         fov_recompute = False
 
@@ -141,7 +152,7 @@ def main():
             deadEntity = playerTurnResult.get('dead')
 
             if message:
-                print(message)
+                msg_log.addMessage(message)
 
             if deadEntity:
                 if deadEntity == player:
@@ -150,7 +161,7 @@ def main():
                 else:
                     message = killMonster(deadEntity)
 
-                print(message)
+                msg_log.addMessage(message)
 
         if gameState == gameStates.ENEMY_TURN:
             for entity in entities:
@@ -163,7 +174,7 @@ def main():
                         deadEntity = enemyTurnResult.get('dead')
 
                         if message:
-                            print(message)
+                            msg_log.addMessage(message)
 
                         if deadEntity:
                             if deadEntity == player:
@@ -172,7 +183,7 @@ def main():
                             else:
                                 message = killMonster(deadEntity)
 
-                            print(message)
+                            msg_log.addMessage(message)
 
                             if gameState == gameStates.PLAYER_DEAD:
                                 break
