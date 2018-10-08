@@ -4,12 +4,14 @@ import libtcodpy as libtcod
 from gameMessages import Message
 
 class stats:
+    # entity stats
     def __init__(self,HP,DEF,STR):
         self.maxHP = HP
         self.HP = HP
         self.DEF = DEF
         self.STR = STR
 
+    # if the entity takes damage
     def takeDamage(self, amount):
         results = []
 
@@ -17,6 +19,7 @@ class stats:
 
         if self.HP <= 0:
             results.append({'dead': self.owner})
+            self.HP = 0
 
         return results
 
@@ -37,3 +40,9 @@ class stats:
                 self.owner.name.capitalize(), target.name), libtcod.white)})
         
         return results
+
+    def heal(self, amount):
+        self.HP += amount
+
+        if self.HP > self.maxHP:
+            self.hp = self.maxHP

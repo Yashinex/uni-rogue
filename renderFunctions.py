@@ -1,12 +1,27 @@
-from enum import Enum
-
 import libtcodpy as libtcod
+
+from enum       import Enum
+from gameStates import gameStates
+from menus      import inventoryMenu
 
 # Sets order of rendering
 class renderOrder(Enum):
     CORPSE = 1
     ITEM   = 2
     ACTOR  = 3
+
+# Hover-over Mouse
+def getNamesUnderMouse(mouse, entities, fovMap):
+    (x, y) = (mouse.cx, mouse.cy)
+
+    # gets the names of everything at location of mouse IF in FOV
+    names = [entity.name for entity in entities
+        if entity.x == x and entity.y == y and
+        libtcod.map_is_in_fov(fovMap, entity.x, entity.y)]
+
+    # joins all the names and returns them
+    names = ', '.join(names)
+    return names.capitalize()
 
 # Renders UI Components
 def renderUI(panel, x, y, totalWidth, name, value, maximum, barColor,
@@ -32,7 +47,7 @@ def renderUI(panel, x, y, totalWidth, name, value, maximum, barColor,
 
 def renderAll(con, panel, entities, player, gameMap, fovMap, 
     fovRecompute, msg_log, screenWidth, screenHeight, barWidth,
-    panelHeight, panelDiff, colors):
+    panelHeight, panelDiff, mouse, colors, gameState):
     # Draw tiles in the gameMap
     if fovRecompute:
         for y in range(gameMap.height):
@@ -70,7 +85,7 @@ def renderAll(con, panel, entities, player, gameMap, fovMap,
     libtcod.console_set_default_background(panel, libtcod.black)
     libtcod.console_clear(panel)
 
-    # print game messages @ 1 line
+    # print game messages @ 1 line / turn
     y = 1
     for message in msg_log.messages:
         libtcod.console_set_default_foreground(panel, message.color)
@@ -79,11 +94,22 @@ def renderAll(con, panel, entities, player, gameMap, fovMap,
         y += 1
 
     renderUI(panel, 1, 1, barWidth, 'HP', player.stats.HP,
-        player.stats.maxHP, libtcod.black, libtcod.darker_red)
+        player.stats.maxHP, libtcod.darker_red, libtcod.darker_gray)
+
+    libtcod.console_set_default_foreground(panel, libtcod.light_gray)
+    libtcod.console_print_ex(panel, 1, 0, libtcod.BKGND_NONE,
+        libtcod.LEFT, getNamesUnderMouse(mouse, entities, fovMap))
 
     libtcod.console_blit(panel, 0, 0, screenWidth, panelHeight, 0, 0,
         panelDiff)
 
+    if gameState in (gameStates.SHOW_INVENTORY, gameStates.DROP_INVENTORY):
+        if gameState == gameStates.SHOW_INVENTORY:
+            inventoryTitle = 'Press the key to use an item or ESC to cancel.\n'
+        else:
+            inventoryTitle = 'Press the key to drop an item or ESC to cancel.\n'
+
+        inventoryMenu(con,inventoryTitle,player.inventory,50,screenWidth,screenHeight)
 
 def clearAll(con, entities):
     for entity in entities:

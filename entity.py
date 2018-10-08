@@ -9,8 +9,9 @@ class Entity:
     """
 
     def __init__(self, x, y, char, color, name, blocks=False, render_order = renderOrder.CORPSE,
-        stats=None, ai=None):
+        stats=None, ai=None, item=None, inventory=None):
 
+        # create attributes for an Entity, i.e. item/player/npc
         self.x              = x
         self.y              = y
         self.char           = char
@@ -20,12 +21,21 @@ class Entity:
         self.render_order   = render_order
         self.stats          = stats
         self.ai             = ai
+        self.item           = item
+        self.inventory      = inventory
 
+        # gives ownership of particular things to entity
         if self.stats:
             self.stats.owner = self
 
         if self.ai:
             self.ai.owner = self
+
+        if self.item:
+            self.item.owner = self
+
+        if self.inventory:
+            self.inventory.owner = self
 
     def move(self, dx, dy):
         # Move the entity some amount

@@ -1,14 +1,15 @@
 import libtcodpy as libtcod
 
-from entity             import Entity, getBlockingEntitiesAtLocation
-from inputHandlers      import handleKeys
-from renderFunctions    import clearAll, renderAll, renderOrder
-from mapObjects.gameMap import gameMap
-from fovFunctions       import initializeFOV, recomputeFOV
-from gameStates         import gameStates
-from components.stats   import stats
-from deathFunctions     import killPlayer, killMonster
-from gameMessages       import messageLog
+from entity                 import Entity, getBlockingEntitiesAtLocation
+from inputHandlers          import handleKeys
+from renderFunctions        import clearAll, renderAll, renderOrder
+from mapObjects.gameMap     import gameMap
+from fovFunctions           import initializeFOV, recomputeFOV
+from gameStates             import gameStates
+from components.stats       import stats
+from deathFunctions         import killPlayer, killMonster
+from gameMessages           import Message, messageLog
+from components.inventory   import Inventory
 
 def main():
     # screen size
@@ -30,12 +31,15 @@ def main():
     mapHeight = 58
 
     # room parameters
-    roomMaxSize = 10
+    roomMaxSize = 14
     roomMinSize = 6
     maxRooms    = 30
 
     # monsters
-    maxMonstersRoom = 3
+    maxMonstersRoom = 4
+
+    # items
+    maxItemsRoom = 2
 
     # object colors dictionary
     colors = {
@@ -48,7 +52,8 @@ def main():
 
     # player stats, location, symbol, and color
     playerStats = stats(HP=40,DEF=2,STR=5)
-    player = Entity(0, 0, '@', libtcod.red, 'Player', blocks=True,
+    invStorage  = Inventory(28)
+    player      = Entity(0, 0, '@', libtcod.red, 'Player', blocks=True,
         render_order = renderOrder.ACTOR, stats=playerStats)
     
     # npc list; location, symbol, color
@@ -71,7 +76,7 @@ def main():
     # creates the game map and initializes its attributes
     game_map = gameMap(mapWidth, mapHeight)
     game_map.makeMap(maxRooms, roomMinSize, roomMaxSize, mapWidth, mapHeight,
-        player, entities, maxMonstersRoom)
+        player, entities, maxMonstersRoom, maxItemsRoom)
 
     # field of view
     fov_algorithm   = 0
@@ -89,10 +94,12 @@ def main():
 
     # sets game to player's turn
     gameState = gameStates.PLAYER_TURN
+    previousState = gameState
 
     # game loop
     while not libtcod.console_is_window_closed():
-        libtcod.sys_check_for_event(libtcod.EVENT_KEY_PRESS, key, mouse)
+        libtcod.sys_check_for_event(libtcod.EVENT_KEY_PRESS | libtcod.EVENT_MOUSE,
+            key, mouse)
 
         if fov_recompute:
             recomputeFOV(fov_map,player.x,player.y,fov_radius,fov_light_walls,
@@ -101,7 +108,7 @@ def main():
         # [DO NOT DELETE] renders entities each frame
         renderAll(con, panel, entities, player, game_map, fov_map, 
             fov_recompute, msg_log, screenWidth, screenHeight, barWidth,
-            panelHeight, panelDiff, colors)
+            panelHeight, panelDiff, mouse, colors, gameState)
 
         fov_recompute = False
 
@@ -111,10 +118,17 @@ def main():
         # [DO NOT DELETE] clears each frame
         clearAll(con, entities)
 
-        action = handleKeys(key)
+        # each turn processes player input
+        action = handleKeys(key, gameState)
 
-        move = action.get('move')
-        exit = action.get('exit')
+        # assigns input to an action
+        move     = action.get('move')
+        wait     = action.get('wait')
+        grab     = action.get('grab')
+        show     = action.get('showInventory')
+        drop     = action.get('drop')
+        invIndex = action.get('inventoryIndex')
+        exit     = action.get('exit')
         fullscreen = action.get('fullscreen')
 
         playerTurnResults = []
@@ -139,17 +153,56 @@ def main():
 
                 gameState = gameStates.ENEMY_TURN
 
+        # character grab item check
+        elif grab and gameState == gameStates.PLAYER_TURN:
+            for entity in entities:
+                if entity.item and entity.x == player.x and entity.y == player.y:
+                    grab = player.inventory.addItem(entity)
+                    playerTurnResults.extend(grab)
+
+                    break
+
+                else:
+                    msg_log.addMessage(Message('There\'s nothing here to pick up.', libtcod.yellow))
+
+        # character inventory check
+        if show:
+            previousState = gameState
+            gameState = gameStates.SHOW_INVENTORY
+
+        # character drop check
+        if drop:
+            previousState = gameState
+            gameState = gameStates.DROP_INVENTORY
+
+        # inventory screen check
+        if invIndex is not None and previousState != gameStates.PLAYER_DEAD and invIndex < len(player.inventory.items):
+            item = player.inventory.items[invIndex]
+            playerTurnResults.extend(player.inventory.use(item))
+
+            if gameState == gameStates.SHOW_INVENTORY:
+                playerTurnResults.extend(player.inventory.use(item))
+
+            elif gameState == gameStates.DROP_INVENTORY:
+                playerTurnResults.extend(player.inventory.dropItem(item))
+
         # exit from inputHandlers
         if exit:
-            return True
+            if gameState in (gameStates.SHOW_INVENTORY, gameStates.DROP_INVENTORY):
+                gameState = previousState
+            else:
+                return True
 
         # fullscreen check
         if fullscreen:
             libtcod.console_set_fullscreen(not libtcod.console_is_fullscreen())
 
         for playerTurnResult in playerTurnResults:
-            message = playerTurnResult.get('message')
-            deadEntity = playerTurnResult.get('dead')
+            message     = playerTurnResult.get('message')
+            deadEntity  = playerTurnResult.get('dead')
+            itemAdded   = playerTurnResult.get('itemAdded')
+            itemUsed    = playerTurnResult.get('consumed')
+            itemDropped = playerTurnResult.get('itemDropped')
 
             if message:
                 msg_log.addMessage(message)
@@ -162,6 +215,20 @@ def main():
                     message = killMonster(deadEntity)
 
                 msg_log.addMessage(message)
+
+            # If you pick up an item...
+            if itemAdded:
+                entities.remove(itemAdded)
+
+                gameState = gameStates.ENEMY_TURN
+
+            # If you use an item...
+            if itemUsed:
+                gameState = gameStates.ENEMY_TURN
+
+            # If you drop an item...
+            if itemDropped:
+                entities.append(itemDropped)
 
         if gameState == gameStates.ENEMY_TURN:
             for entity in entities:

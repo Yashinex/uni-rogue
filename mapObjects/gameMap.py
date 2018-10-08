@@ -5,8 +5,10 @@ from entity                 import Entity
 from mapObjects.tile        import tile
 from mapObjects.rectangle   import rect
 from components.ai          import basicMonster
+from components.item        import Item
 from components.stats       import stats
 from renderFunctions        import renderOrder
+from itemFunctions          import heal
 
 class gameMap:
 
@@ -23,7 +25,7 @@ class gameMap:
 
     # Generates randomized room layouts
     def makeMap(self, maxRooms, roomMinSize, roomMaxSize, mapWidth, mapHeight,
-        player, entities, maxMonstersRoom):
+        player, entities, maxMonstersRoom, maxItemsRoom):
         
         rooms = []
         numRooms = 0
@@ -76,7 +78,8 @@ class gameMap:
                         self.createVertTunnel(prevY,newY,prevX)
                         self.createHorzTunnel(prevX,newX,prevY)
 
-                self.placeEntities(newRoom, entities, maxMonstersRoom)
+                self.placeEntities(newRoom, entities, maxMonstersRoom,
+                    maxItemsRoom)
 
                 # append new room to list
                 rooms.append(newRoom)
@@ -100,9 +103,11 @@ class gameMap:
             self.tiles[x][y].blocked = False
             self.tiles[x][y].blockSight = False
 
-    def placeEntities(self, room, entities, maxMonstersRoom):
+    def placeEntities(self, room, entities, maxMonstersRoom,
+        maxItemsRoom):
         # random number of monsters
         numMonsters = randint(0, maxMonstersRoom)
+        numItems    = randint(0, maxItemsRoom)
 
         for i in range(numMonsters):
             # choose a random location in the room
@@ -131,6 +136,17 @@ class gameMap:
                         stats=monsterStats, ai=componentAI)
 
                 entities.append(monster)
+
+        for i in range(numItems):
+            x = randint(room.x1+1, room.x2-1)
+            y = randint(room.y1+1, room.y2-1)
+
+            if not any([entity for entity in entities if entity.x==x and entity.y==y]):
+                itemComponent = Item(useFunction=heal, amount=5)
+                item = Entity(x, y, '*', libtcod.red, 'Health Potion',
+                    render_order=renderOrder.ITEM, item=itemComponent)
+
+                entities.append(item)
 
     def isBlocked(self, x, y):
         if self.tiles[x][y].blocked:
