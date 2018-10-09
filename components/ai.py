@@ -17,4 +17,3 @@ class basicMonster:
                 results.extend(attackResults)
 
         return results
-

@@ -1,7 +1,37 @@
 import libtcodpy as libtcod
 
+from gameStates import gameStates
 
-def handleKeys(key):
+def handleKeys(key, gameState):
+    if gameState == gameStates.PLAYER_TURN:
+        return handlePlayerTurnKeys(key)
+
+    elif gameState == gameStates.PLAYER_DEAD:
+        return handlePlayerDeadKeys(key)
+
+    elif gameState in (gameStates.SHOW_INVENTORY,gameStates.DROP_INVENTORY):
+        return handleInventoryKeys(key)
+
+    return {}
+
+def handleInventoryKeys(key):
+    index = key.c - ord('a')
+
+    if index >= 0:
+        return {'inventoryIndex': index}
+
+    if key.vk == libtcod.KEY_ENTER and key.lalt:
+        # Alt+Enter: toggle full screen
+        return {'fullscreen': True}
+
+    elif key.vk == libtcod.KEY_ESCAPE:
+        # Exit menu
+        return {'exit': True}
+
+    return {}
+
+def handlePlayerTurnKeys(key):
+    key_char = chr(key.c)
 
     # Linear movement
     if key.vk == libtcod.KEY_UP or key.vk == libtcod.KEY_KP8 :
@@ -28,11 +58,21 @@ def handleKeys(key):
         return {'move': (1, 1)}
 
     # User actions
+    # grab item
+    if key_char == 'g':
+        return {'grab': True}
 
-    # wait
+    # drop item
+    if key_char == 'd':
+        return {'drop': True}
+
+    # check inventory
+    elif key_char == 'i':
+        return {'showInventory': True}
+
+    # wait [TODO]
     elif key.vk == libtcod.KEY_KP5:
-        print('You pause for a moment.')
-        return {'move': (0,0)}
+        return {'wait': (0,0)}
 
     if key.vk == libtcod.KEY_ENTER and key.lalt:
         # Alt+Enter: toggle full screen
@@ -43,4 +83,20 @@ def handleKeys(key):
         return {'exit': True}
 
     # No key was pressed
+    return {}
+
+def handlePlayerDeadKeys(key):
+    key_char = chr(key.c)
+
+    if key_char == 'i':
+        return {'showInventory': True}
+
+    if key.vk == libtcod.KEY_ENTER and key.lalt:
+        # Alt+Enter: toggle full screen
+        return {'fullscreen': True}
+
+    elif key.vk == libtcod.KEY_ESCAPE:
+        # Exit the menu
+        return {'exit': True}
+
     return {}
